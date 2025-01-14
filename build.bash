@@ -5,21 +5,21 @@ set -e
 script_dir=$(dirname "$0")
 cache=${GHIDRA_APP_BUILD_CACHE:-"${script_dir}/cache"}
 
-jdk_x64_url='https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.7%2B7/OpenJDK17U-jdk_x64_mac_hotspot_17.0.7_7.tar.gz'
-jdk_x64_checksum='50d0e9840113c93916418068ba6c845f1a72ed0dab80a8a1f7977b0e658b65fb'
-jdk_x64_home='jdk-17.0.7+7/Contents/Home'
+jdk_x64_url='https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.5%2B11/OpenJDK21U-jdk_x64_mac_hotspot_21.0.5_11.tar.gz'
+jdk_x64_checksum='b9b46f396ab5f3658fa5569af963896167c7f735cfec816359c04101fae38bdf'
+jdk_x64_home='jdk-21.0.5+11/Contents/Home'
 
-jdk_arm_url='https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.7%2B7/OpenJDK17U-jdk_aarch64_mac_hotspot_17.0.7_7.tar.gz'
-jdk_arm_checksum='1d6aeb55b47341e8ec33cc1644d58b88dfdcce17aa003a858baa7460550e6ff9'
-jdk_arm_home='jdk-17.0.7+7/Contents/Home'
+jdk_arm_url='https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.5%2B11/OpenJDK21U-jdk_aarch64_mac_hotspot_21.0.5_11.tar.gz'
+jdk_arm_checksum='dc6db7347907d23743d13af935d3c10e8b3490acdf542115f578838227da0dab'
+jdk_arm_home='jdk-21.0.5+11/Contents/Home'
 
-ghidra_url='https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_11.0.3_build/ghidra_11.0.3_PUBLIC_20240410.zip'
+ghidra_url='https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_11.2.1_build/ghidra_11.2.1_PUBLIC_20241105.zip'
 ghidra_dist=${ghidra_url##*/}
-ghidra_checksum='2462a2d0ab11e30f9e907cd3b4aa6b48dd2642f325617e3d922c28e752be6761'
+ghidra_checksum='ce4db5117da0fbaf8f33863fec4f40902f754f06b68945a59fb1c0f9b1bc461c'
 
-gradle_url='https://services.gradle.org/distributions/gradle-8.1.1-bin.zip'
+gradle_url='https://services.gradle.org/distributions/gradle-8.12-bin.zip'
 gradle_dist=${gradle_url##*/}
-gradle_checksum='e111cb9948407e26351227dabce49822fb88c37ee72f1d1582a69c68af2e702f'
+gradle_checksum='7a00d51fb93147819aab76024feece20b6b84e420694101f276be952e08bef03'
 
 # Figure out Ghidra's version number.
 [[ "${ghidra_dist}" =~ ^ghidra_([0-9.]+)_([^_]+)_ ]] || exit 1
@@ -167,6 +167,21 @@ build_natives() {
       target=mac_arm_64
       ;;
   esac
+
+  cat << EOF > ${app}/Contents/Resources/${ghidra_dir}/Ghidra/settings.gradle
+/* ###
+ * IP: Public Domain
+ */
+// Recurse root project subdirectories and include all discovered projects
+// (directories containing a build.gradle file)
+fileTree(rootProject.projectDir) {
+	exclude 'build.gradle' // exclude root project
+	include '**/build.gradle'
+}.each {
+	include it.parentFile.name;
+	project(":\$it.parentFile.name").projectDir = it.parentFile;
+}
+EOF
 
   JAVA_HOME="${java_home}" PATH="${java_home}/bin:${PATH}" \
     "${gradle_dir}/bin/gradle" \
